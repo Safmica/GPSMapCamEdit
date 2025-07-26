@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fake GPS Cam</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gray-100 text-gray-800 p-6">
+        <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+            <h1 class="text-2xl font-bold mb-4 text-center">Fake GPS Camera</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-medium">Upload Foto:</label>
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                        class="mt-1 border rounded px-3 py-1 w-full"
+                    />
+                </div>
+                <div>
+                    <label class="block font-medium">Tanggal & Waktu:</label>
+                    <input
+                        type="datetime-local"
+                        id="timeInput"
+                        class="mt-1 border rounded px-3 py-1 w-full"
+                    />
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-4 justify-center">
+                <button
+                    id="randomBtn"
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                    Generate
+                </button>
+                <button
+                    onclick="download()"
+                    class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                    Download
+                </button>
+            </div>
+
+            <div class="border overflow-hidden max-w-full">
+                <canvas
+                    id="canvas"
+                    width="960"
+                    height="1280"
+                    class="border rounded w-full h-auto"
+                ></canvas>
+            </div>
+
+            <p class="text-xs text-center text-gray-500 mt-4">
+                🧭 Gunakan file <code>template.jpg</code> (960x1280) yang sudah ada GPS
+                map di bawahnya
+            </p>
+        </div>
+
+        <script>
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+
+            const userImgInput = document.getElementById("imageInput");
+            const timeInput = document.getElementById("timeInput");
+            const randomBtn = document.getElementById("randomBtn");
+
+            const CANVAS_WIDTH = 960;
+            const CANVAS_HEIGHT = 1280;
+            const GPS_HEIGHT = 200;
+
+            let lat = -2.931113;
+            let lon = 104.789904;
+            let userImg;
+
+            userImgInput.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = () => {
+                    userImg = new Image();
+                    userImg.onload = () => drawAll();
+                    userImg.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            randomBtn.onclick = () => {
+                randomizeLatLon();
+                drawAll();
+            };
+
+            function randomizeLatLon() {
+                const baseLat = "-2.9311";
+                const baseLon = "104.7899";
+
+                const randomLatSuffix = String(Math.floor(Math.random() * 21)).padStart(
+                    2,
+                    "0"
+                );
+                const randomLonSuffix = String(Math.floor(Math.random() * 21)).padStart(
+                    2,
+                    "0"
+                );
+
+                lat = parseFloat(`${baseLat}${randomLatSuffix}`);
+                lon = parseFloat(`${baseLon}${randomLonSuffix}`);
+            }
+
+            function drawAll() {
+                if (!userImg) return;
+
+                const template = new Image();
+                template.src = "template.png";
+
+                template.onload = () => {
+                    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                    const targetHeight = CANVAS_HEIGHT - GPS_HEIGHT;
+                    const imgRatio = userImg.width / userImg.height;
+                    const canvasRatio = CANVAS_WIDTH / targetHeight;
+
+                    let drawWidth, drawHeight, offsetX, offsetY;
+
+                    if (imgRatio > canvasRatio) {
+                        drawHeight = targetHeight;
+                        drawWidth = targetHeight * imgRatio;
+                        offsetX = (CANVAS_WIDTH - drawWidth) / 2;
+                        offsetY = 0;
+                    } else {
+                        drawWidth = CANVAS_WIDTH;
+                        drawHeight = CANVAS_WIDTH / imgRatio;
+                        offsetX = 0;
+                        offsetY = (targetHeight - drawHeight) / 2;
+                    }
+
+                    ctx.drawImage(userImg, offsetX, offsetY, drawWidth, drawHeight);
+
+                    ctx.drawImage(template, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "600 24px Arial";
+
+                    const date = new Date(timeInput.value);
+                    if (!isNaN(date)) {
+                        const dateStr = `${String(date.getDate()).padStart(
+                            2,
+                            "0"
+                        )}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(
+                            date.getFullYear()
+                        ).slice(-2)}`;
+                        let hours = date.getHours();
+                        const ampm = hours >= 12 ? "PM" : "AM";
+                        hours = hours % 12 || 12;
+                        const minutes = String(date.getMinutes()).padStart(2, "0");
+                        const timeStr = `${hours}:${minutes} ${ampm}`;
+
+                        ctx.fillText(
+                            "Kecamatan Sako, Sumatera Selatan, Indonesia",
+                            230,
+                            1116
+                        );
+                        ctx.font = "600 21px Arial";
+                        ctx.fillText(
+                            "3q9q+gwh, Jl. Siaran, Sako, Kec. Sako, Kota Palembang, Sumatera",
+                            230,
+                            1148
+                        );
+                        ctx.fillText("Selatan 30961, Indonesia", 230, 1180);
+                        ctx.fillText(
+                            `Lat ${lat.toFixed(6)}° Long ${lon.toFixed(6)}°`,
+                            230,
+                            1212
+                        );
+                        ctx.fillText(`${dateStr} ${timeStr} GMT +07:00`, 230, 1248);
+                    }
+                };
+            }
+
+            function download() {
+                const link = document.createElement("a");
+                link.download = "hasil-gps.jpg";
+                link.href = canvas.toDataURL("image/jpeg");
+                link.click();
+            }
+        </script>
+    </body>
+</html>
